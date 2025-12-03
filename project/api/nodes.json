@@ -1,1 +1,9 @@
-[]
+[
+  {
+    "id": 0,
+    "name": "Life",
+    "desc": "",
+    "photo": "",
+    "parentId": null
+  }
+]
