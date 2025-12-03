@@ -4,7 +4,112 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Memorial Tree of Life</title>
-<link rel="stylesheet" href="style.css">
+<style>
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to bottom, #fefaf0, #e2ded3);
+  margin: 0;
+  padding: 20px;
+  text-align: center;
+}
+
+h1 { color: #5b3e2b; }
+
+form { margin-bottom: 20px; }
+
+input, textarea, button {
+  padding: 6px;
+  margin: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background-color: #8b5e3c;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover { background-color: #a26b49; }
+
+.tree {
+  position: relative;
+  width: 500px;
+  max-width: 100%;
+  height: 600px;
+  margin: 20px auto;
+  background-image: url("https://static.vecteezy.com/system/resources/previews/053/107/775/non_2x/silhouette-of-tree-without-leaves-vector.jpg");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+}
+
+.leaf {
+  position: absolute;
+  width: 40px;
+  height: 60px;
+  background-color: #4CAF50;
+  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leaf img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  clip-path: circle(50%);
+}
+
+.modal {
+  position: fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background: rgba(0,0,0,0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #fff;
+  padding:20px;
+  border-radius: 10px;
+  text-align:center;
+  max-width:300px;
+}
+
+#adminPopup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(161,109,77,0.9);
+  color: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  display: none;
+  z-index: 1000;
+}
+
+#adminPopup button {
+  display: block;
+  margin: 3px 0;
+  padding: 5px 8px;
+  background: #8b5e3c;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+
+#adminPopup button:hover { background: #c08a6a; }
+</style>
 </head>
 <body>
 
@@ -27,7 +132,27 @@
   <div id="adminNodes"></div>
 </div>
 
-<script>
+<!-- Firebase SDK v12 -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyBjFhfJNBtYCn2aiCmL9r9_u1ME4cjx24g",
+  authDomain: "shannon-skelton.firebaseapp.com",
+  projectId: "shannon-skelton",
+  storageBucket: "shannon-skelton.appspot.com",
+  messagingSenderId: "820781146588",
+  appId: "1:820781146588:web:cb9053ff0eca5b7d7e2f19",
+  measurementId: "G-XWJLK8P8EM"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// DOM elements
 const tree = document.getElementById("tree");
 const form = document.getElementById("addForm");
 const modal = document.getElementById("modal");
@@ -39,7 +164,8 @@ let isAdmin = false;
 const key = prompt("Enter admin key (optional):");
 if(key==="Jagger.0011"){ isAdmin=true; adminPopup.style.display="block"; }
 
-async function readFileAsDataURL(file){
+// Convert file to base64
+function readFileAsDataURL(file){
   return new Promise(resolve=>{
     if(!file) return resolve('');
     const reader=new FileReader();
@@ -48,21 +174,21 @@ async function readFileAsDataURL(file){
   });
 }
 
+// Load leaves from Firestore
 async function loadLeaves(){
-  const res = await fetch('/api/nodes.json');
-  const nodes = await res.json();
   tree.innerHTML = '';
   adminNodes.innerHTML = '';
-
-  nodes.forEach((n,i)=>{
+  const snapshot = await getDocs(collection(db, "leaves"));
+  snapshot.forEach((docSnap)=>{
+    const n = docSnap.data();
     const leaf = document.createElement("div");
     leaf.className = "leaf";
-    leaf.style.left = (Math.random()*(tree.clientWidth-40))+"px";
-    leaf.style.top = (Math.random()*(tree.clientHeight-60))+"px";
+    leaf.style.left = n.x + "px";
+    leaf.style.top = n.y + "px";
     if(n.photo) leaf.innerHTML = `<img src="${n.photo}">`;
     leaf.addEventListener("click", ()=> {
       modalContent.innerHTML = `<strong>${n.name}</strong><br>${n.desc}`;
-      modal.style.display = "flex";
+      modal.style.display="flex";
     });
     tree.appendChild(leaf);
 
@@ -70,11 +196,7 @@ async function loadLeaves(){
       const btn=document.createElement("button");
       btn.textContent = `Delete ${n.name}`;
       btn.addEventListener("click", async ()=>{
-        await fetch('/api/delete',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({id:n.id,key:'Jagger.0011'})
-        });
+        await deleteDoc(doc(db, "leaves", docSnap.id));
         loadLeaves();
       });
       adminNodes.appendChild(btn);
@@ -82,18 +204,17 @@ async function loadLeaves(){
   });
 }
 
+// Add leaf
 form.addEventListener("submit", async e=>{
   e.preventDefault();
   const name = document.getElementById("name").value || "Anonymous";
   const desc = document.getElementById("desc").value || "";
   const file = document.getElementById("photo").files[0];
   const photo = await readFileAsDataURL(file);
+  const x = Math.random()*(tree.clientWidth-40);
+  const y = Math.random()*(tree.clientHeight-60);
 
-  await fetch("/api/upload",{
-    method:"POST",
-    headers:{"Content-Type":"application/json"},
-    body: JSON.stringify({name,desc,photo})
-  });
+  await addDoc(collection(db, "leaves"), { name, desc, photo, x, y });
   form.reset();
   loadLeaves();
 });
