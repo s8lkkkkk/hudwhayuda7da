@@ -1,0 +1,118 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to bottom, #fefaf0, #e2ded3);
+  color: #333;
+  display: flex;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+h1 {
+  text-align: center;
+  font-size: 2.8em;
+  margin-bottom: 40px;
+  color: #5b3e2b;
+}
+
+form {
+  margin-bottom: 40px;
+  text-align: center;
+}
+
+input, textarea, button {
+  padding: 8px;
+  margin: 5px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button {
+  background-color: #8b5e3c;
+  color: white;
+  cursor: pointer;
+  border: none;
+  transition: background 0.3s;
+}
+
+button:hover { background-color: #a26b49; }
+
+.tree {
+  position: relative;
+  width: 100%;
+  max-width: 1000px;
+  height: 800px;
+  margin: 0 auto;
+}
+
+#centralNode {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+.node {
+  position: absolute;
+  background-color: #a16d4d;
+  color: #fff;
+  border-radius: 50%;
+  width: 100px;
+  height: 100px;
+  text-align: center;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  transition: transform 0.3s, background 0.3s;
+}
+
+.node:hover {
+  transform: scale(1.1);
+  background-color: #c08a6a;
+}
+
+.node img {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #fff;
+  margin-bottom: 5px;
+}
+
+.node .name { font-weight: bold; font-size: 0.8em; }
+.node .desc { font-size: 0.65em; }
+
+/* connecting lines */
+.connector {
+  position: absolute;
+  width: 2px;
+  background-color: #a16d4d;
+  transform-origin: top left;
+  z-index: 1;
+}
+
+/* subtle bottom-right admin popup */
+#adminPopup {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  background: rgba(161, 109, 77, 0.9);
+  color: #fff;
+  padding: 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  display: none;
+  z-index: 1000;
+}
+
+#adminPopup button {
+  display: block;
+  margin: 3px 0;
+  padding: 5px 8px;
+  background: #8b5e3c;
+  border: none;
+  color: white;
+  border-radius: 5px;
+  cursor: pointer;
+}
+#adminPopup button:hover { background: #c08a6a; }
