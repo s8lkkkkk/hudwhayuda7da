@@ -3,16 +3,22 @@ body {
   background: linear-gradient(to bottom, #fefaf0, #e2ded3);
   color: #333;
   margin: 0;
-  padding: 20px;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  flex-direction: column;
   text-align: center;
 }
 
 h1 {
+  margin-top: 20px;
   color: #5b3e2b;
 }
 
 form {
-  margin-bottom: 20px;
+  margin: 20px;
 }
 
 input, textarea, button {
@@ -31,41 +37,38 @@ button {
 
 button:hover { background-color: #a26b49; }
 
-.tree-container {
+/* Static tree trunk */
+.tree {
   position: relative;
-  width: 100%;
-  min-height: 600px;
+  width: 400px;
+  height: 600px;
+  margin: 0 auto;
+  background: url('https://i.imgur.com/Yz6TPfB.png') no-repeat center bottom;
+  background-size: contain;
 }
 
-.node {
+/* Leaves (memory nodes) */
+.leaf {
   position: absolute;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
   background-color: #a16d4d;
-  border-radius: 50%;
-  width: 100px;
-  height: 100px;
-  text-align: center;
   color: #fff;
+  text-align: center;
+  font-size: 0.7em;
   padding: 5px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.3);
   cursor: pointer;
-  transition: transform 0.3s;
+  overflow: hidden;
 }
 
-.node:hover {
-  transform: scale(1.1);
-  background-color: #c08a6a;
-}
-
-.node img {
-  width: 50px;
-  height: 50px;
+.leaf img {
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  object-fit: cover;
   margin-bottom: 3px;
+  object-fit: cover;
 }
-
-.node .name { font-weight: bold; font-size: 0.8em; }
-.node .desc { font-size: 0.65em; }
 
 /* admin popup */
 #adminPopup {
@@ -90,5 +93,4 @@ button:hover { background-color: #a26b49; }
   border-radius: 5px;
   cursor: pointer;
 }
-
 #adminPopup button:hover { background: #c08a6a; }
