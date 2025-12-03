@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memorial Tree of Life</title>
+<title>Memorial Gallery</title>
 <style>
 body {
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -15,7 +15,10 @@ body {
 
 h1 { color: #5b3e2b; }
 
-form { margin-bottom: 20px; }
+form {
+  margin-bottom: 20px;
+  text-align: center;
+}
 
 input, textarea, button {
   padding: 6px;
@@ -33,36 +36,41 @@ button {
 
 button:hover { background-color: #a26b49; }
 
-.tree {
-  position: relative;
-  width: 500px;
-  max-width: 100%;
-  height: 600px;
-  margin: 20px auto;
-  background-image: url("https://static.vecteezy.com/system/resources/previews/053/107/775/non_2x/silhouette-of-tree-without-leaves-vector.jpg");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center bottom;
-}
-
-.leaf {
-  position: absolute;
-  width: 40px;
-  height: 60px;
-  background-color: #4CAF50;
-  clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  cursor: pointer;
+.gallery {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  max-height: 600px;
+  overflow-y: scroll;
   justify-content: center;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background-color: #fff;
 }
 
-.leaf img {
+.entry {
+  width: 120px;
+  cursor: pointer;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f2f2f2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.entry img {
   width: 100%;
-  height: 100%;
+  height: 100px;
   object-fit: cover;
-  border-radius: 50%;
-  clip-path: circle(50%);
+  border-bottom: 1px solid #ccc;
+}
+
+.entry span {
+  font-size: 0.9rem;
+  padding: 5px;
+  text-align: center;
 }
 
 .modal {
@@ -71,7 +79,7 @@ button:hover { background-color: #a26b49; }
   left:0;
   width:100%;
   height:100%;
-  background: rgba(0,0,0,0.6);
+  background: rgba(0,0,0,0.7);
   display: none;
   align-items: center;
   justify-content: center;
@@ -81,8 +89,16 @@ button:hover { background-color: #a26b49; }
   background: #fff;
   padding:20px;
   border-radius: 10px;
-  text-align:center;
-  max-width:300px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow-y: auto;
+  text-align: center;
+}
+
+.modal-content img {
+  max-width: 100%;
+  border-radius: 10px;
+  margin-bottom: 10px;
 }
 
 #adminPopup {
@@ -113,16 +129,16 @@ button:hover { background-color: #a26b49; }
 </head>
 <body>
 
-<h1>Memorial Tree of Life</h1>
+<h1>Memorial Gallery</h1>
 
 <form id="addForm">
   <input type="text" id="name" placeholder="Name (optional)"><br>
-  <textarea id="desc" placeholder="Message (optional)"></textarea><br>
+  <textarea id="desc" placeholder="Story / Message (optional)"></textarea><br>
   <input type="file" id="photo" accept="image/*"><br>
-  <button type="submit">Add Leaf</button>
+  <button type="submit">Add Entry</button>
 </form>
 
-<div class="tree" id="tree"></div>
+<div class="gallery" id="gallery"></div>
 
 <div class="modal" id="modal">
   <div class="modal-content" id="modalContent"></div>
@@ -132,7 +148,6 @@ button:hover { background-color: #a26b49; }
   <div id="adminNodes"></div>
 </div>
 
-<!-- Firebase SDK v12 -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
 import { getFirestore, collection, getDocs, addDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
@@ -152,8 +167,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-// DOM elements
-const tree = document.getElementById("tree");
+const gallery = document.getElementById("gallery");
 const form = document.getElementById("addForm");
 const modal = document.getElementById("modal");
 const modalContent = document.getElementById("modalContent");
@@ -174,54 +188,52 @@ function readFileAsDataURL(file){
   });
 }
 
-// Load leaves from Firestore
-async function loadLeaves(){
-  tree.innerHTML = '';
+// Load entries from Firestore
+async function loadEntries(){
+  gallery.innerHTML = '';
   adminNodes.innerHTML = '';
   const snapshot = await getDocs(collection(db, "leaves"));
-  snapshot.forEach((docSnap)=>{
+  snapshot.forEach(docSnap=>{
     const n = docSnap.data();
-    const leaf = document.createElement("div");
-    leaf.className = "leaf";
-    leaf.style.left = n.x + "px";
-    leaf.style.top = n.y + "px";
-    if(n.photo) leaf.innerHTML = `<img src="${n.photo}">`;
-    leaf.addEventListener("click", ()=> {
-      modalContent.innerHTML = `<strong>${n.name}</strong><br>${n.desc}`;
+
+    const entry = document.createElement("div");
+    entry.className = "entry";
+    entry.innerHTML = `<img src="${n.photo || ''}" alt="${n.name}">
+                       <span>${n.name}</span>`;
+    entry.addEventListener("click", ()=>{
+      modalContent.innerHTML = `<img src="${n.photo || ''}"><h3>${n.name}</h3><p>${n.desc}</p>`;
       modal.style.display="flex";
     });
-    tree.appendChild(leaf);
+    gallery.appendChild(entry);
 
     if(isAdmin){
-      const btn=document.createElement("button");
+      const btn = document.createElement("button");
       btn.textContent = `Delete ${n.name}`;
       btn.addEventListener("click", async ()=>{
         await deleteDoc(doc(db, "leaves", docSnap.id));
-        loadLeaves();
+        loadEntries();
       });
       adminNodes.appendChild(btn);
     }
   });
 }
 
-// Add leaf
+// Add entry
 form.addEventListener("submit", async e=>{
   e.preventDefault();
   const name = document.getElementById("name").value || "Anonymous";
   const desc = document.getElementById("desc").value || "";
   const file = document.getElementById("photo").files[0];
   const photo = await readFileAsDataURL(file);
-  const x = Math.random()*(tree.clientWidth-40);
-  const y = Math.random()*(tree.clientHeight-60);
 
-  await addDoc(collection(db, "leaves"), { name, desc, photo, x, y });
+  await addDoc(collection(db, "leaves"), { name, desc, photo });
   form.reset();
-  loadLeaves();
+  loadEntries();
 });
 
 modal.addEventListener("click", ()=> modal.style.display="none");
 
-loadLeaves();
+loadEntries();
 </script>
 
 </body>
