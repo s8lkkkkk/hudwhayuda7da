@@ -1,103 +1,145 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Static Memorial Tree</title>
-<link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Memorial Tree of Life</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #fefaf0;
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h1 {
+      color: #5b3e2b;
+    }
+
+    #tree {
+      position: relative;
+      width: 500px; /* adjust to your tree image size or desired width */
+      max-width: 100%;
+      margin: 20px 0;
+      /* Use the provided tree image as background */
+      background-image: url("https://static.vecteezy.com/system/resources/previews/053/107/775/non_2x/silhouette-of-tree-without-leaves-vector.jpg");
+      background-position: center bottom;
+      background-size: contain;
+      background-repeat: no-repeat;
+      min-height: 600px; /* ensure enough space for leaves on branches */
+    }
+
+    .leaf {
+      position: absolute;
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background-color: #a16d4d;
+      color: white;
+      text-align: center;
+      font-size: 0.75em;
+      overflow: hidden;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+
+    .leaf img {
+      width: 48px;
+      height: 48px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 4px;
+    }
+
+    form {
+      text-align: center;
+    }
+
+    input, textarea, button {
+      padding: 5px;
+      margin: 5px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 1em;
+    }
+
+    button {
+      background: #8b5e3c;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #a26b49;
+    }
+  </style>
 </head>
 <body>
 
-<h1>Memorial Tree of Life</h1>
+  <h1>Memorial Tree of Life</h1>
 
-<form id="addForm">
-  <input type="text" id="name" placeholder="Name (optional)">
-  <textarea id="desc" placeholder="Message (optional)"></textarea><br>
-  <input type="file" id="photo" accept="image/*"><br>
-  <button type="submit">Add Leaf</button>
-</form>
+  <form id="addForm">
+    <input type="text" id="name" placeholder="Name (optional)">
+    <br>
+    <textarea id="desc" placeholder="Message / Memory (optional)"></textarea>
+    <br>
+    <input type="file" id="photo" accept="image/*">
+    <br>
+    <button type="submit">Add Leaf</button>
+  </form>
 
-<div class="tree" id="tree"></div>
+  <div id="tree"></div>
 
-<div id="adminPopup">
-  <div id="adminNodes"></div>
-</div>
+  <script>
+    const tree = document.getElementById("tree");
+    const form = document.getElementById("addForm");
 
-<script>
-const addForm = document.getElementById('addForm');
-const tree = document.getElementById('tree');
-const adminPopup = document.getElementById('adminPopup');
-const adminNodes = document.getElementById('adminNodes');
-
-let isAdmin = false;
-const key = prompt("Enter admin key (optional):");
-if(key === "Jagger.0011"){
-  isAdmin = true;
-  adminPopup.style.display = "block";
-}
-
-async function readFileAsDataURL(file){
-  return new Promise(resolve=>{
-    if(!file) return resolve('');
-    const reader = new FileReader();
-    reader.onload=()=>resolve(reader.result);
-    reader.readAsDataURL(file);
-  });
-}
-
-async function loadLeaves(){
-  const res = await fetch('/api/nodes.json');
-  const nodes = await res.json();
-  tree.querySelectorAll('.leaf').forEach(l=>l.remove());
-  adminNodes.innerHTML = '';
-
-  nodes.filter(n=>n.id!==0).forEach((n,i)=>{
-    const div = document.createElement('div');
-    div.className = 'leaf';
-    // random position on the tree
-    div.style.left = (50 + Math.random()*250) + 'px';
-    div.style.top = (50 + Math.random()*400) + 'px';
-    div.innerHTML = `
-      ${n.photo ? `<img src="${n.photo}">` : ''}
-      <div class="name">${n.name}</div>
-      <div class="desc">${n.desc}</div>
-    `;
-    tree.appendChild(div);
-
-    if(isAdmin){
-      const btn = document.createElement('button');
-      btn.textContent = `Delete ${n.name}`;
-      btn.addEventListener('click', async ()=>{
-        await fetch('/api/delete',{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({id:n.id,key:'Jagger.0011'})
-        });
-        loadLeaves();
+    async function readImage(file) {
+      return new Promise((resolve, reject) => {
+        if (!file) return resolve("");
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
       });
-      adminNodes.appendChild(btn);
     }
-  });
-}
 
-addForm.addEventListener('submit', async e=>{
-  e.preventDefault();
-  const name = document.getElementById('name').value || 'Anonymous';
-  const desc = document.getElementById('desc').value || '';
-  const photoFile = document.getElementById('photo').files[0];
-  const photo = await readFileAsDataURL(photoFile);
+    function addLeaf({ name, desc, photo }) {
+      const leaf = document.createElement("div");
+      leaf.className = "leaf";
+      leaf.innerHTML = `
+        ${photo ? `<img src="${photo}">` : ""}
+        <div class="name">${name}</div>
+        <div class="desc">${desc}</div>
+      `;
+      // Random-ish position — you can refine to fixed positions manually
+      const x = Math.random() * (tree.clientWidth - 80);
+      const y = Math.random() * (tree.clientHeight - 120);
+      leaf.style.left = x + "px";
+      leaf.style.top = y + "px";
 
-  await fetch('/api/upload',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name,desc,photo,parentId:0})
-  });
+      tree.appendChild(leaf);
+    }
 
-  addForm.reset();
-  loadLeaves();
-});
+    form.addEventListener("submit", async e => {
+      e.preventDefault();
+      const name = document.getElementById("name").value || "Anonymous";
+      const desc = document.getElementById("desc").value || "";
+      const file = document.getElementById("photo").files[0];
+      const photo = await readImage(file);
 
-loadLeaves();
-</script>
+      addLeaf({ name, desc, photo });
+
+      form.reset();
+    });
+  </script>
+
 </body>
 </html>
