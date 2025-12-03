@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Memorial Tree of Life</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div>
+<h1>Memorial Tree of Life</h1>
+
+<form id="addForm">
+  <input type="text" id="name" placeholder="Name (optional)">
+  <textarea id="desc" placeholder="Message / Memory (optional)"></textarea><br>
+  <input type="file" id="photo" accept="image/*"><br>
+  <button type="submit">Add to Tree</button>
+</form>
+
+<div class="tree" id="tree">
+  <div id="centralNode" class="node">Life</div>
+</div>
+</div>
+
+<!-- Admin popup -->
+<div id="adminPopup">
+  <div id="adminNodes"></div>
+</div>
+
+<script>
+const form = document.getElementById('addForm');
+const tree = document.getElementById('tree');
+const centralNode = document.getElementById('centralNode');
+const adminPopup = document.getElementById('adminPopup');
+const adminNodes = document.getElementById('adminNodes');
+
+let isAdmin = false;
+const enteredKey = prompt("Enter secret key for admin (optional):");
+if (enteredKey === "Jagger.0011") {
+  isAdmin = true;
+  adminPopup.style.display = "block";
+}
+
+async function readFileAsDataURL(file) {
+  return new Promise(resolve => {
+    if (!file) return resolve("");
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+function createLine(x1, y1, x2, y2) {
+  const line = document.createElement('div');
+  line.className = 'connector';
+  const length = Math.hypot(x2 - x1, y2 - y1);
+  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+  line.style.width = length + 'px';
+  line.style.transform = `rotate(${angle}deg)`;
+  line.style.left = x1 + 'px';
+  line.style.top = y1 + 'px';
+  tree.appendChild(line);
+}
+
+async function loadNodes() {
+  const res = await fetch('/api/nodes.json');
+  const nodes = await res.json();
+
+  // remove existing nodes and connectors
+  tree.querySelectorAll('.treeNode, .connector').forEach(el => el.remove());
+  adminNodes.innerHTML = '';
+
+  const centerX = centralNode.offsetLeft + centralNode.offsetWidth / 2;
+  const centerY = centralNode.offsetTop + centralNode.offsetHeight / 2;
+
+  const radiusStep = 150;
+  let radius = radiusStep;
+  nodes.forEach((node, index) => {
+    const angle = (index / nodes.length) * 2 * Math.PI;
+    const x = centerX + radius * Math.cos(angle) - 50; // node width/2
+    const y = centerY + radius * Math.sin(angle) - 50; // node height/2
+
+    const div = document.createElement('div');
+    div.className = "node treeNode";
+    div.innerHTML = `
+      ${node.photo ? `<img src="${node.photo}" alt="${node.name}">` : ''}
+      <div class="name">${node.name}</div>
+      <div class="desc">${node.desc}</div>
+    `;
+    div.style.left = x + 'px';
+    div.style.top = y + 'px';
+    tree.appendChild(div);
+
+    // create connecting line
+    createLine(centerX, centerY, x + 50, y + 50); // +50 to center of node
+
+    if (isAdmin) {
+      const btn = document.createElement("button");
+      btn.textContent = `Delete ${node.name}`;
+      btn.addEventListener("click", async () => {
+        await fetch('/api/delete', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ id: node.id, key: 'Jagger.0011' })
+        });
+        loadNodes();
+      });
+      adminNodes.appendChild(btn);
+    }
+
+    // increase radius every 8 nodes for concentric circles
+    if ((index + 1) % 8 === 0) radius += radiusStep;
+  });
+}
+
+form.addEventListener('submit', async e => {
+  e.preventDefault();
+  const name = document.getElementById('name').value || "Anonymous";
+  const desc = document.getElementById('desc').value || "";
+  const photoFile = document.getElementById('photo').files[0];
+  const photo = await readFileAsDataURL(photoFile);
+
+  await fetch('/api/upload', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name, desc, photo })
+  });
+
+  form.reset();
+  loadNodes();
+});
+
+window.addEventListener('resize', loadNodes);
+
+loadNodes();
+</script>
+
+</body>
+</html>
