@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Memorial Tree of Life</title>
+<title>Static Memorial Tree</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -14,13 +14,10 @@
   <input type="text" id="name" placeholder="Name (optional)">
   <textarea id="desc" placeholder="Message (optional)"></textarea><br>
   <input type="file" id="photo" accept="image/*"><br>
-  <input type="number" id="parentId" placeholder="Parent ID (optional)">
-  <button type="submit">Add Node</button>
+  <button type="submit">Add Leaf</button>
 </form>
 
-<div class="tree-container" id="treeContainer">
-  <svg id="branches" style="position:absolute; width:100%; height:100%;"></svg>
-</div>
+<div class="tree" id="tree"></div>
 
 <div id="adminPopup">
   <div id="adminNodes"></div>
@@ -28,79 +25,46 @@
 
 <script>
 const addForm = document.getElementById('addForm');
-const treeContainer = document.getElementById('treeContainer');
-const branchesSVG = document.getElementById('branches');
+const tree = document.getElementById('tree');
 const adminPopup = document.getElementById('adminPopup');
 const adminNodes = document.getElementById('adminNodes');
 
 let isAdmin = false;
 const key = prompt("Enter admin key (optional):");
-if (key === "Jagger.0011") {
+if(key === "Jagger.0011"){
   isAdmin = true;
   adminPopup.style.display = "block";
 }
 
-async function readFileAsDataURL(file) {
-  return new Promise(resolve => {
-    if (!file) return resolve("");
+async function readFileAsDataURL(file){
+  return new Promise(resolve=>{
+    if(!file) return resolve('');
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
+    reader.onload=()=>resolve(reader.result);
     reader.readAsDataURL(file);
   });
 }
 
-async function loadTree() {
+async function loadLeaves(){
   const res = await fetch('/api/nodes.json');
   const nodes = await res.json();
-
-  treeContainer.querySelectorAll('.node').forEach(n => n.remove());
-  branchesSVG.innerHTML = '';
+  tree.querySelectorAll('.leaf').forEach(l=>l.remove());
   adminNodes.innerHTML = '';
 
-  const nodeMap = {};
-  nodes.forEach(n => nodeMap[n.id] = n);
-
-  const levels = {};
-  function assignLevels(node, depth=0){
-    levels[node.id] = depth;
-    const children = nodes.filter(c => c.parentId === node.id);
-    children.forEach(c => assignLevels(c, depth+1));
-  }
-  assignLevels(nodes[0]); // root node
-
-  // horizontal spacing per level
-  const levelNodes = {};
-  nodes.forEach(n=>{
-    const d = levels[n.id];
-    if(!levelNodes[d]) levelNodes[d]=[];
-    levelNodes[d].push(n);
-  });
-
-  const positions = {};
-  Object.keys(levelNodes).forEach(depth=>{
-    const arr = levelNodes[depth];
-    const spacing = treeContainer.offsetWidth / (arr.length+1);
-    arr.forEach((n,i)=>{
-      positions[n.id] = {
-        x: spacing*(i+1) - 50,
-        y: 100 + depth*150
-      };
-    });
-  });
-
-  nodes.forEach(n=>{
+  nodes.filter(n=>n.id!==0).forEach((n,i)=>{
     const div = document.createElement('div');
-    div.className = 'node';
-    div.style.left = positions[n.id].x + 'px';
-    div.style.top = positions[n.id].y + 'px';
+    div.className = 'leaf';
+    // random position on the tree
+    div.style.left = (50 + Math.random()*250) + 'px';
+    div.style.top = (50 + Math.random()*400) + 'px';
     div.innerHTML = `
       ${n.photo ? `<img src="${n.photo}">` : ''}
       <div class="name">${n.name}</div>
       <div class="desc">${n.desc}</div>
     `;
-    treeContainer.appendChild(div);
+    tree.appendChild(div);
 
-    if(isAdmin && n.id !== 0){
+    if(isAdmin){
       const btn = document.createElement('button');
       btn.textContent = `Delete ${n.name}`;
       btn.addEventListener('click', async ()=>{
@@ -109,22 +73,9 @@ async function loadTree() {
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({id:n.id,key:'Jagger.0011'})
         });
-        loadTree();
+        loadLeaves();
       });
       adminNodes.appendChild(btn);
-    }
-
-    if(n.parentId !== null){
-      const parentPos = positions[n.parentId];
-      const childPos = positions[n];
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute('x1', parentPos.x+50);
-      line.setAttribute('y1', parentPos.y+50);
-      line.setAttribute('x2', childPos.x+50);
-      line.setAttribute('y2', childPos.y+50);
-      line.setAttribute('stroke','#a16d4d');
-      line.setAttribute('stroke-width','3');
-      branchesSVG.appendChild(line);
     }
   });
 }
@@ -133,23 +84,20 @@ addForm.addEventListener('submit', async e=>{
   e.preventDefault();
   const name = document.getElementById('name').value || 'Anonymous';
   const desc = document.getElementById('desc').value || '';
-  const parentId = parseInt(document.getElementById('parentId').value) || 0;
   const photoFile = document.getElementById('photo').files[0];
   const photo = await readFileAsDataURL(photoFile);
 
   await fetch('/api/upload',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({name,desc,photo,parentId})
+    body: JSON.stringify({name,desc,photo,parentId:0})
   });
+
   addForm.reset();
-  loadTree();
+  loadLeaves();
 });
 
-window.addEventListener('resize', loadTree);
-
-loadTree();
+loadLeaves();
 </script>
-
 </body>
 </html>
